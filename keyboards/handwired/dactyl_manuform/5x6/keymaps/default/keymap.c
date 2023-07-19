@@ -13,11 +13,28 @@ enum custom_keycodes {
     MUTE_OBS = SAFE_RANGE,
 };
 
+enum {
+  TD_LSFT_CAPS = 0
+};
+
+typedef enum {
+  DOUBLE_TAP,
+  HOLD,
+} td_state_t;
+
+static td_state_t td_state;
+
+int cur_dance (tap_dance_state_t *state);
+
+void tdlsftcaps_finished (tap_dance_state_t *state, void *user_data);
+
+void tdlsftcaps_reset (tap_dance_state_t *state, void *user_data);
+
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_QWERTY] = LAYOUT_5x6(
         KC_ESC , KC_1  , KC_2  , KC_3  , KC_4  , KC_5  ,                         KC_6  , KC_7  , KC_8  , KC_9  , KC_0  ,KC_GRV,
         KC_TAB , KC_Q  , KC_W  , KC_E  , KC_R  , KC_T  ,                         KC_Y  , KC_U  , KC_I  , KC_O  , KC_P  ,KC_MINS,
-        MT(MOD_LSFT, KC_CAPS), KC_A ,KC_S ,KC_D, KC_F, KC_G,                     KC_H  , KC_J  , KC_K  , KC_L  ,KC_SCLN,KC_QUOT,
+        TD(TD_LSFT_CAPS), KC_A ,KC_S ,KC_D, KC_F, KC_G,                     KC_H  , KC_J  , KC_K  , KC_L  ,KC_SCLN,KC_QUOT,
         KC_LCTL, KC_Z  , KC_X  , KC_C  , KC_V  , KC_B  ,                          KC_N  , KC_M  ,KC_COMM,KC_DOT ,KC_SLSH,KC_BSLS,
                          KC_LBRC,KC_RBRC,                                                       KC_PLUS, KC_EQL,
                                          RAISE,KC_SPC,                           KC_BSPC, LOWER,
@@ -86,3 +103,39 @@ uint16_t get_tapping_term(uint16_t keycode, keyrecord_t *record) {
             return TAPPING_TERM;
     }
 }
+
+void tdlsftcaps_reset (tap_dance_state_t *state, void *user_data) {
+  switch (td_state) {
+    case DOUBLE_TAP:
+      unregister_code16(KC_CAPS);
+      break;
+    case HOLD:
+      unregister_mods(MOD_BIT(KC_LSFT));
+      break;
+  }
+}
+
+void tdlsftcaps_finished (tap_dance_state_t *state, void *user_data) {
+  td_state = cur_dance(state);
+  switch (td_state) {
+    case DOUBLE_TAP:
+      register_code16(KC_CAPS);
+      break;
+    case HOLD:
+      register_mods(MOD_BIT(KC_LSFT));
+      break;
+  }
+}
+
+int cur_dance (tap_dance_state_t *state) {
+    if ((state->interrupted || !state->pressed) && state->count == 2) {
+        return DOUBLE_TAP;
+    } else {
+        return HOLD;
+    }
+}
+
+tap_dance_action_t tap_dance_actions[] = {
+    // Tap once for Escape, twice for Caps Lock
+    [TD_LSFT_CAPS] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, tdlsftcaps_finished, tdlsftcaps_reset),
+};

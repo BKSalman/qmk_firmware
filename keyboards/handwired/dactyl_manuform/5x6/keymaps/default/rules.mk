@@ -1,2 +1,3 @@
 DEBOUNCE_TYPE = sym_eager_pk
 BOOTMAGIC_ENABLE = yes
+TAP_DANCE_ENABLE = yes
